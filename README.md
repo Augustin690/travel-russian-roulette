@@ -15,6 +15,16 @@ npm install
 npm run dev
 ```
 
+## Deploy to GitHub Pages
+This repository includes a GitHub Actions workflow at `.github/workflows/deploy.yml` that deploys on pushes to `main`.
+
+One-time GitHub setup:
+1. Go to **Settings → Pages**.
+2. Set **Source** to **GitHub Actions**.
+
+Then push to `main` and the site will be published to:
+`https://<username>.github.io/<repository-name>/`
+
 ## Configuration
 Paste your Amap Web JS API key into `src/config.ts`:
 ```ts
