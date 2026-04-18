@@ -1,38 +1,88 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import FilterPanel from './components/FilterPanel';
 import SpinButton from './components/SpinButton';
 import SlotMachine from './components/SlotMachine';
 import ResultCard from './components/ResultCard';
-import { useFilteredCities, type Filters } from './hooks/useFilteredCities';
+import { usePlaces, type Origin, type PlacesFilters } from './hooks/usePlaces';
 import { useRoulette } from './hooks/useRoulette';
+import type { City } from './data/cities';
 
 export default function App() {
-  const [filters, setFilters] = useState<Filters>({
-    radiusKm: 200,
-    transport: 'both',
+  const [origin, setOrigin] = useState<Origin | null>(null);
+  const [filters, setFilters] = useState<PlacesFilters>({
+    radiusKm: 100,
     activities: [],
   });
 
-  const pool = useFilteredCities(filters);
+  const { places, status: placesStatus, error: placesError } = usePlaces(origin, filters);
   const { state, winner, spin, reset, progress } = useRoulette();
-  const [error, setError] = useState<string | null>(null);
+  const [spinError, setSpinError] = useState<string | null>(null);
+
+  // Enriched winner — gets image + description from Wikipedia after selection
+  const [enrichedWinner, setEnrichedWinner] = useState<City | null>(null);
+
+  useEffect(() => {
+    if (!winner) { setEnrichedWinner(null); return; }
+    setEnrichedWinner(winner);
+
+    const ctrl = new AbortController();
+    fetch(
+      `https://en.wikipedia.org/w/api.php?action=query` +
+      `&titles=${encodeURIComponent(winner.name)}` +
+      `&prop=pageimages|extracts` +
+      `&format=json&pithumbsize=1200&exintro=1&exchars=400&origin=*`,
+      { signal: ctrl.signal },
+    )
+      .then((r) => r.json())
+      .then((data) => {
+        const pages = data.query?.pages ?? {};
+        const page = Object.values(pages)[0] as Record<string, any>;
+        if (!page || page.missing !== undefined) return;
+        setEnrichedWinner((prev) =>
+          prev
+            ? {
+                ...prev,
+                image: page.thumbnail?.source ?? prev.image,
+                description: page.extract
+                  ? page.extract.replace(/<[^>]*>/g, '').replace(/\n+/g, ' ').slice(0, 350)
+                  : prev.description,
+              }
+            : null,
+        );
+      })
+      .catch(() => {});
+
+    return () => ctrl.abort();
+  }, [winner?.id]);
 
   const spinning = state === 'spinning';
   const revealed = state === 'revealed';
 
   const handleSpin = () => {
-    if (pool.length === 0) {
-      setError('No cities match — try widening your filters · 无匹配城市，请放宽条件');
+    if (!origin) {
+      setSpinError('Set your starting city first');
       return;
     }
-    setError(null);
-    spin(pool);
+    if (placesStatus === 'loading') {
+      setSpinError('Still loading places — wait a moment');
+      return;
+    }
+    if (placesStatus === 'error') {
+      setSpinError(placesError ?? 'Could not load places');
+      return;
+    }
+    if (places.length === 0) {
+      setSpinError('No places found — try widening your radius or changing filters');
+      return;
+    }
+    setSpinError(null);
+    spin(places);
   };
 
   const handleAgain = () => {
     reset();
-    setError(null);
+    setSpinError(null);
   };
 
   return (
@@ -62,12 +112,11 @@ export default function App() {
             <span className="text-sm text-cream/50">Roulette Trip</span>
           </div>
           <p className="text-xs text-cream/50 mt-1 leading-relaxed">
-            Pick your criteria, pull the trigger. One randomly chosen day trip
-            from 上海 · Shanghai.
+            Set your city, spin the wheel, and discover your next day trip.
           </p>
         </header>
 
-        {/* Slot machine (only visible during spin / reveal preview) */}
+        {/* Slot machine (only visible during spin / reveal) */}
         <AnimatePresence>
           {(spinning || revealed) && (
             <motion.div
@@ -77,7 +126,7 @@ export default function App() {
               className="mb-6"
             >
               <SlotMachine
-                pool={pool}
+                pool={places}
                 winner={winner}
                 progress={progress}
                 spinning={spinning}
@@ -89,12 +138,18 @@ export default function App() {
         {/* Filters — hidden while spinning for focus */}
         {!spinning && !revealed && (
           <FilterPanel
+            origin={origin}
+            onOriginSelect={(o) => {
+              setOrigin(o);
+              setSpinError(null);
+            }}
             filters={filters}
             onChange={(f) => {
               setFilters(f);
-              if (error) setError(null);
+              if (spinError) setSpinError(null);
             }}
-            eligibleCount={pool.length}
+            eligibleCount={places.length}
+            placesStatus={placesStatus}
             disabled={spinning}
           />
         )}
@@ -104,9 +159,9 @@ export default function App() {
           <div className="mt-auto pt-10 flex justify-center">
             <SpinButton
               onClick={handleSpin}
-              disabled={spinning}
+              disabled={spinning || placesStatus === 'loading'}
               spinning={spinning}
-              error={error}
+              error={spinError}
             />
           </div>
         )}
@@ -114,7 +169,7 @@ export default function App() {
 
       {/* Result card bottom sheet */}
       <AnimatePresence>
-        {revealed && winner && (
+        {revealed && enrichedWinner && (
           <>
             <motion.div
               initial={{ opacity: 0 }}
@@ -124,8 +179,8 @@ export default function App() {
               onClick={handleAgain}
             />
             <ResultCard
-              city={winner}
-              transport={filters.transport}
+              city={enrichedWinner}
+              originDisplayName={origin?.displayName ?? ''}
               onSpinAgain={handleAgain}
             />
           </>

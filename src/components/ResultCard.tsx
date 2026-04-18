@@ -1,31 +1,16 @@
 import { motion } from 'framer-motion';
 import type { City } from '../data/cities';
-import type { TransportMode } from '../hooks/useFilteredCities';
 import { tagColor } from './FilterPanel';
 import MapEmbed from './MapEmbed';
 
 interface Props {
   city: City;
-  transport: TransportMode;
+  originDisplayName: string;
   onSpinAgain: () => void;
 }
 
-function fmtMinutes(mins: number): string {
-  if (mins <= 0) return '—';
-  if (mins < 60) return `${mins} min`;
-  const h = Math.floor(mins / 60);
-  const m = mins % 60;
-  return m === 0 ? `${h} h` : `${h}h ${m}m`;
-}
-
-export default function ResultCard({ city, transport, onSpinAgain }: Props) {
-  // Pick the travel-time badge label based on the transport filter.
-  const showTrain = transport !== 'drive' && city.trainMinutes > 0;
-  const showDrive = transport !== 'train' && city.driveMinutes > 0;
-
-  const googleMapsUrl = `https://www.google.com/maps/dir/Shanghai,China/${encodeURIComponent(
-    city.nameEn
-  )},China`;
+export default function ResultCard({ city, originDisplayName, onSpinAgain }: Props) {
+  const osmUrl = `https://www.openstreetmap.org/directions?route=${encodeURIComponent(originDisplayName)};${city.lat},${city.lng}`;
 
   return (
     <motion.div
@@ -43,14 +28,18 @@ export default function ResultCard({ city, transport, onSpinAgain }: Props) {
         <div className="w-10 h-1 rounded-full bg-cream/15" />
       </div>
 
-      {/* cover image */}
-      <div className="relative h-44 -mt-3">
-        <img
-          src={city.coverImage}
-          alt={city.nameEn}
-          className="w-full h-full object-cover"
-          referrerPolicy="no-referrer"
-        />
+      {/* cover image or gradient placeholder */}
+      <div className="relative h-44 -mt-3 bg-ink-700">
+        {city.image ? (
+          <img
+            src={city.image}
+            alt={city.name}
+            className="w-full h-full object-cover"
+            referrerPolicy="no-referrer"
+          />
+        ) : (
+          <div className="w-full h-full bg-gradient-to-br from-ink-700 via-ink-800 to-ink" />
+        )}
         <div className="absolute inset-0 bg-gradient-to-t from-ink-800 via-transparent to-transparent" />
       </div>
 
@@ -58,24 +47,25 @@ export default function ResultCard({ city, transport, onSpinAgain }: Props) {
         {/* title */}
         <div>
           <div className="text-[10px] uppercase tracking-[0.3em] text-vermilion mb-1">
-            {city.province} 省
+            {city.distanceKm} km away
           </div>
           <h2 className="text-3xl font-extrabold text-cream leading-none">
-            {city.nameEn}
+            {city.name}
           </h2>
-          <div className="text-xl text-cream/70 mt-1">{city.nameZh}</div>
+          {city.osmTags['name:en'] && city.osmTags['name:en'] !== city.name && (
+            <div className="text-base text-cream/60 mt-1">{city.osmTags['name:en']}</div>
+          )}
         </div>
 
         {/* badges */}
         <div className="flex flex-wrap gap-2">
-          <Badge label={`${city.distanceKm} km`} sub="距离" />
-          {showTrain && (
-            <Badge label={`🚄 ${fmtMinutes(city.trainMinutes)}`} sub="高铁" />
+          <Badge label={`${city.distanceKm} km`} sub="Distance" />
+          {city.osmTags.ele && (
+            <Badge label={`${city.osmTags.ele} m`} sub="Elevation" />
           )}
-          {showDrive && (
-            <Badge label={`🚗 ${fmtMinutes(city.driveMinutes)}`} sub="自驾" />
+          {city.osmTags.wikidata && (
+            <Badge label="Wiki" sub="Info available" />
           )}
-          <Badge label={`${city.population.toLocaleString()}k`} sub="人口" />
         </div>
 
         {/* tag chips */}
@@ -83,38 +73,37 @@ export default function ResultCard({ city, transport, onSpinAgain }: Props) {
           {city.tags.map((t) => (
             <span
               key={t}
-              className={`px-2 py-1 rounded-full text-[11px] font-semibold ${tagColor(
-                t
-              )}`}
+              className={`px-2 py-1 rounded-full text-[11px] font-semibold ${tagColor(t)}`}
             >
               {t}
             </span>
           ))}
         </div>
 
-        {/* highlights */}
-        <div>
-          <h3 className="text-xs tracking-[0.25em] uppercase text-cream/50 mb-2">
-            Highlights · 亮点
-          </h3>
-          <ol className="space-y-2">
-            {city.highlights.map((h, i) => (
-              <li key={i} className="flex gap-3 text-sm text-cream/90">
-                <span className="w-6 h-6 flex-none rounded-full bg-vermilion text-cream text-xs font-bold flex items-center justify-center">
-                  {i + 1}
-                </span>
-                <span className="leading-snug pt-0.5">{h}</span>
-              </li>
-            ))}
-          </ol>
-        </div>
+        {/* description from Wikipedia */}
+        {city.description && (
+          <div>
+            <h3 className="text-xs tracking-[0.25em] uppercase text-cream/50 mb-2">
+              About
+            </h3>
+            <p className="text-sm text-cream/70 leading-relaxed">{city.description}</p>
+          </div>
+        )}
+
+        {/* loading indicator while enriching */}
+        {!city.description && !city.image && (
+          <div className="flex items-center gap-2 text-[11px] text-cream/30">
+            <div className="w-3 h-3 rounded-full border border-cream/20 border-t-cream/50 animate-spin" />
+            Loading details…
+          </div>
+        )}
 
         {/* map */}
         <div>
           <h3 className="text-xs tracking-[0.25em] uppercase text-cream/50 mb-2">
-            On the map · 地图
+            On the map
           </h3>
-          <MapEmbed lng={city.lng} lat={city.lat} label={city.nameEn} />
+          <MapEmbed lng={city.lng} lat={city.lat} label={city.name} />
         </div>
 
         {/* actions */}
@@ -125,17 +114,15 @@ export default function ResultCard({ city, transport, onSpinAgain }: Props) {
               border border-cream/10 hover:bg-ink-700/60 transition"
           >
             Spin again
-            <div className="text-[10px] font-normal opacity-60">再转一次</div>
           </button>
           <a
-            href={googleMapsUrl}
+            href={osmUrl}
             target="_blank"
             rel="noreferrer"
             className="py-3 rounded-xl font-semibold text-sm bg-vermilion text-cream
               hover:bg-vermilion-dark transition text-center"
           >
             I'm going! →
-            <div className="text-[10px] font-normal opacity-80">出发</div>
           </a>
         </div>
       </div>
@@ -147,9 +134,7 @@ function Badge({ label, sub }: { label: string; sub: string }) {
   return (
     <div className="px-3 py-1.5 rounded-lg bg-ink-700 border border-cream/10">
       <div className="text-sm font-semibold text-cream leading-none">{label}</div>
-      <div className="text-[9px] uppercase tracking-widest text-cream/50 mt-0.5">
-        {sub}
-      </div>
+      <div className="text-[9px] uppercase tracking-widest text-cream/50 mt-0.5">{sub}</div>
     </div>
   );
 }
