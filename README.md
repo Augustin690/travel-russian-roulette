@@ -23,7 +23,7 @@ One-time GitHub setup:
 2. Set **Source** to **GitHub Actions**.
 
 Then push to `main` and the site will be published to:
-`https://augustin690.github.io/travel-russian-roulette/`
+`https://<username>.github.io/<repository-name>/`
 
 ## Configuration
 Paste your Amap Web JS API key into `src/config.ts`:
