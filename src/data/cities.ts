@@ -1,530 +1,57 @@
 export type ActivityTag =
-  | 'ancient-town'
+  | 'historic'
   | 'nature'
-  | 'food'
   | 'museum'
   | 'beach'
   | 'mountain'
-  | 'modern';
+  | 'cultural'
+  | 'viewpoint';
 
 export interface City {
-  id: string;
-  nameEn: string;
-  nameZh: string;
-  province: string;
-  lng: number;
+  id: string;           // "node/123456" or "way/789"
+  name: string;
   lat: number;
-  distanceKm: number;
-  trainMinutes: number;
-  driveMinutes: number;
+  lng: number;
+  distanceKm: number;   // haversine from origin, calculated on fetch
   tags: ActivityTag[];
-  highlights: [string, string, string];
-  coverImage: string;
-  population: number; // in thousands
+  osmTags: Record<string, string>;
+  image?: string;       // Wikipedia thumbnail, enriched async after selection
+  description?: string; // Wikipedia extract, enriched async after selection
 }
 
-// Great-circle distance reference: Shanghai (121.4737, 31.2304)
-// HSR minutes are approximate off-peak from Shanghai Hongqiao (上海虹桥).
-// Drive minutes assume light-to-moderate traffic on G-series expressways.
-export const CITIES: City[] = [
-  {
-    id: 'suzhou',
-    nameEn: 'Suzhou',
-    nameZh: '苏州',
-    province: 'Jiangsu',
-    lng: 120.5853,
-    lat: 31.2989,
-    distanceKm: 85,
-    trainMinutes: 25,
-    driveMinutes: 75,
-    tags: ['ancient-town', 'museum', 'food'],
-    highlights: [
-      'Wander the Humble Administrator\'s Garden',
-      'Silk museum + Pingjiang Road canals',
-      'Bowl of Aozao noodles in the old city',
-    ],
-    coverImage:
-      'https://images.unsplash.com/photo-1545893835-abaa50cbe628?auto=format&fit=crop&w=1200&q=70',
-    population: 12750,
-  },
-  {
-    id: 'hangzhou',
-    nameEn: 'Hangzhou',
-    nameZh: '杭州',
-    province: 'Zhejiang',
-    lng: 120.1551,
-    lat: 30.2741,
-    distanceKm: 170,
-    trainMinutes: 50,
-    driveMinutes: 135,
-    tags: ['nature', 'food', 'modern'],
-    highlights: [
-      'Bike around West Lake at sunset',
-      'Longjing tea tasting in Meijiawu village',
-      'Dragon Well + Lingyin Temple',
-    ],
-    coverImage:
-      'https://images.unsplash.com/photo-1589195098793-5ffcaf8c53d5?auto=format&fit=crop&w=1200&q=70',
-    population: 12400,
-  },
-  {
-    id: 'nanjing',
-    nameEn: 'Nanjing',
-    nameZh: '南京',
-    province: 'Jiangsu',
-    lng: 118.7969,
-    lat: 32.0603,
-    distanceKm: 270,
-    trainMinutes: 75,
-    driveMinutes: 210,
-    tags: ['museum', 'food', 'modern'],
-    highlights: [
-      'Climb the Ming city wall at Zhonghua Gate',
-      'Confucius Temple night market',
-      'Sun Yat-sen Mausoleum in Purple Mountain',
-    ],
-    coverImage:
-      'https://images.unsplash.com/photo-1554628128-16e9de9c6da3?auto=format&fit=crop&w=1200&q=70',
-    population: 9420,
-  },
-  {
-    id: 'ningbo',
-    nameEn: 'Ningbo',
-    nameZh: '宁波',
-    province: 'Zhejiang',
-    lng: 121.5492,
-    lat: 29.8683,
-    distanceKm: 155,
-    trainMinutes: 100,
-    driveMinutes: 180,
-    tags: ['food', 'museum', 'modern'],
-    highlights: [
-      'Tianyi Pavilion — oldest library in China',
-      'Old Bund waterfront stroll',
-      'Steamed yellow croaker for dinner',
-    ],
-    coverImage:
-      'https://images.unsplash.com/photo-1623830551499-fefc65e68d34?auto=format&fit=crop&w=1200&q=70',
-    population: 9620,
-  },
-  {
-    id: 'wuxi',
-    nameEn: 'Wuxi',
-    nameZh: '无锡',
-    province: 'Jiangsu',
-    lng: 120.3119,
-    lat: 31.4912,
-    distanceKm: 130,
-    trainMinutes: 40,
-    driveMinutes: 110,
-    tags: ['nature', 'ancient-town', 'food'],
-    highlights: [
-      'Boat ride on Lake Tai (Taihu)',
-      'Lingshan Grand Buddha',
-      'Sweet Wuxi spare-ribs lunch',
-    ],
-    coverImage:
-      'https://images.unsplash.com/photo-1626268220361-c49ce96b0efe?auto=format&fit=crop&w=1200&q=70',
-    population: 7460,
-  },
-  {
-    id: 'yangzhou',
-    nameEn: 'Yangzhou',
-    nameZh: '扬州',
-    province: 'Jiangsu',
-    lng: 119.4213,
-    lat: 32.3932,
-    distanceKm: 230,
-    trainMinutes: 120,
-    driveMinutes: 240,
-    tags: ['ancient-town', 'food', 'nature'],
-    highlights: [
-      'Morning dim sum at Fuchun teahouse',
-      'Slender West Lake garden walk',
-      'He Garden Qing-dynasty residence',
-    ],
-    coverImage:
-      'https://images.unsplash.com/photo-1591709361090-1b59c5f4037b?auto=format&fit=crop&w=1200&q=70',
-    population: 4580,
-  },
-  {
-    id: 'zhenjiang',
-    nameEn: 'Zhenjiang',
-    nameZh: '镇江',
-    province: 'Jiangsu',
-    lng: 119.4526,
-    lat: 32.2044,
-    distanceKm: 220,
-    trainMinutes: 70,
-    driveMinutes: 210,
-    tags: ['ancient-town', 'food', 'nature'],
-    highlights: [
-      'Jinshan Temple on the Yangtze',
-      'Aromatic black vinegar tasting',
-      'Climb Beigu Mountain pavilions',
-    ],
-    coverImage:
-      'https://images.unsplash.com/photo-1599940824399-b87987ceb72a?auto=format&fit=crop&w=1200&q=70',
-    population: 3210,
-  },
-  {
-    id: 'changzhou',
-    nameEn: 'Changzhou',
-    nameZh: '常州',
-    province: 'Jiangsu',
-    lng: 119.9741,
-    lat: 31.8110,
-    distanceKm: 165,
-    trainMinutes: 55,
-    driveMinutes: 150,
-    tags: ['modern', 'food', 'nature'],
-    highlights: [
-      'China Dinosaur Park thrill rides',
-      'Tianning Temple pagoda view',
-      'Sticky rice dumplings at Yancheng Night Market',
-    ],
-    coverImage:
-      'https://images.unsplash.com/photo-1568871391150-d9b3e0a08b67?auto=format&fit=crop&w=1200&q=70',
-    population: 5260,
-  },
-  {
-    id: 'huzhou',
-    nameEn: 'Huzhou',
-    nameZh: '湖州',
-    province: 'Zhejiang',
-    lng: 120.1026,
-    lat: 30.8672,
-    distanceKm: 170,
-    trainMinutes: 85,
-    driveMinutes: 165,
-    tags: ['nature', 'ancient-town', 'food'],
-    highlights: [
-      'Sheraton Moon Hotel horseshoe landmark',
-      'Nanxun water town day trip',
-      'Fresh bamboo shoots in spring',
-    ],
-    coverImage:
-      'https://images.unsplash.com/photo-1580501174460-df0922496201?auto=format&fit=crop&w=1200&q=70',
-    population: 3400,
-  },
-  {
-    id: 'shaoxing',
-    nameEn: 'Shaoxing',
-    nameZh: '绍兴',
-    province: 'Zhejiang',
-    lng: 120.5820,
-    lat: 30.0303,
-    distanceKm: 200,
-    trainMinutes: 95,
-    driveMinutes: 210,
-    tags: ['ancient-town', 'food', 'museum'],
-    highlights: [
-      'Lu Xun\'s former residence + memorial hall',
-      'Warm a bowl of Shaoxing yellow wine',
-      'Black felt-hat boats through canals',
-    ],
-    coverImage:
-      'https://images.unsplash.com/photo-1566573311013-84bf6dfff0e5?auto=format&fit=crop&w=1200&q=70',
-    population: 5330,
-  },
-  {
-    id: 'jiaxing',
-    nameEn: 'Jiaxing',
-    nameZh: '嘉兴',
-    province: 'Zhejiang',
-    lng: 120.7556,
-    lat: 30.7469,
-    distanceKm: 95,
-    trainMinutes: 30,
-    driveMinutes: 100,
-    tags: ['ancient-town', 'food', 'museum'],
-    highlights: [
-      'South Lake + CCP first congress boat',
-      'Sticky rice zongzi at Wufangzhai',
-      'Moon Pond Lane waterside bars',
-    ],
-    coverImage:
-      'https://images.unsplash.com/photo-1528112973420-15ffe74c7030?auto=format&fit=crop&w=1200&q=70',
-    population: 5510,
-  },
-  {
-    id: 'zhoushan',
-    nameEn: 'Zhoushan',
-    nameZh: '舟山',
-    province: 'Zhejiang',
-    lng: 122.1075,
-    lat: 30.0160,
-    distanceKm: 215,
-    trainMinutes: 0,
-    driveMinutes: 270,
-    tags: ['beach', 'food', 'nature'],
-    highlights: [
-      'Zhujiajian island beaches',
-      'Shenjiamen seafood night market',
-      'Ferry to nearby Dongji archipelago',
-    ],
-    coverImage:
-      'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1200&q=70',
-    population: 1160,
-  },
-  {
-    id: 'taizhou-zj',
-    nameEn: 'Taizhou',
-    nameZh: '台州',
-    province: 'Zhejiang',
-    lng: 121.4208,
-    lat: 28.6560,
-    distanceKm: 300,
-    trainMinutes: 150,
-    driveMinutes: 330,
-    tags: ['beach', 'nature', 'food'],
-    highlights: [
-      'Shenxianju glass walkways on cliffs',
-      'Taozhu Old Street (桃渚古城)',
-      'Yellow rice cake and fish noodles',
-    ],
-    coverImage:
-      'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=1200&q=70',
-    population: 6640,
-  },
-  {
-    id: 'yancheng',
-    nameEn: 'Yancheng',
-    nameZh: '盐城',
-    province: 'Jiangsu',
-    lng: 120.1395,
-    lat: 33.3776,
-    distanceKm: 290,
-    trainMinutes: 140,
-    driveMinutes: 260,
-    tags: ['nature', 'beach', 'museum'],
-    highlights: [
-      'Yellow Sea wetland — red-crowned cranes',
-      'Dafeng Milu Père David deer park',
-      'Seaside mudflat sunrise at Dongtai',
-    ],
-    coverImage:
-      'https://images.unsplash.com/photo-1507608616759-54f48f0af0ee?auto=format&fit=crop&w=1200&q=70',
-    population: 6710,
-  },
-  {
-    id: 'nantong',
-    nameEn: 'Nantong',
-    nameZh: '南通',
-    province: 'Jiangsu',
-    lng: 120.8572,
-    lat: 32.0160,
-    distanceKm: 115,
-    trainMinutes: 70,
-    driveMinutes: 150,
-    tags: ['museum', 'modern', 'beach'],
-    highlights: [
-      'Langshan Mountain temples + Yangtze view',
-      'Nantong Museum — China\'s oldest public museum',
-      'Rudong coastal wind-farm beach',
-    ],
-    coverImage:
-      'https://images.unsplash.com/photo-1599909099472-b3fcdeaa0d6f?auto=format&fit=crop&w=1200&q=70',
-    population: 7720,
-  },
-  {
-    id: 'hefei',
-    nameEn: 'Hefei',
-    nameZh: '合肥',
-    province: 'Anhui',
-    lng: 117.2272,
-    lat: 31.8206,
-    distanceKm: 300,
-    trainMinutes: 135,
-    driveMinutes: 300,
-    tags: ['museum', 'modern', 'food'],
-    highlights: [
-      'Three-country tripod Sangguo site park',
-      'Anhui Provincial Museum',
-      'Bao-gong Memorial Temple gardens',
-    ],
-    coverImage:
-      'https://images.unsplash.com/photo-1523741543316-beb7fc7023d8?auto=format&fit=crop&w=1200&q=70',
-    population: 9400,
-  },
-  {
-    id: 'tongli',
-    nameEn: 'Tongli',
-    nameZh: '同里',
-    province: 'Jiangsu',
-    lng: 120.7186,
-    lat: 31.1575,
-    distanceKm: 75,
-    trainMinutes: 0,
-    driveMinutes: 90,
-    tags: ['ancient-town', 'nature'],
-    highlights: [
-      'Tuisi Garden UNESCO site',
-      'Fifteen stone bridges crisscrossing canals',
-      'Chinese Sex Culture Museum (yes, really)',
-    ],
-    coverImage:
-      'https://images.unsplash.com/photo-1545244015-4c17ef6bf6a7?auto=format&fit=crop&w=1200&q=70',
-    population: 55,
-  },
-  {
-    id: 'xitang',
-    nameEn: 'Xitang',
-    nameZh: '西塘',
-    province: 'Zhejiang',
-    lng: 120.8897,
-    lat: 30.9460,
-    distanceKm: 90,
-    trainMinutes: 0,
-    driveMinutes: 90,
-    tags: ['ancient-town', 'food'],
-    highlights: [
-      '1300-year-old waterside arcade covered walk',
-      'Mission Impossible III filming spots',
-      'Rice wine + lotus-leaf pork dinner',
-    ],
-    coverImage:
-      'https://images.unsplash.com/photo-1555217851-6141535bd771?auto=format&fit=crop&w=1200&q=70',
-    population: 90,
-  },
-  {
-    id: 'wuzhen',
-    nameEn: 'Wuzhen',
-    nameZh: '乌镇',
-    province: 'Zhejiang',
-    lng: 120.4946,
-    lat: 30.7459,
-    distanceKm: 110,
-    trainMinutes: 0,
-    driveMinutes: 115,
-    tags: ['ancient-town', 'food', 'museum'],
-    highlights: [
-      'Xizha scenic area at night — lantern-lit canals',
-      'Indigo-dye cloth workshop',
-      'White-water Mao Dun former residence',
-    ],
-    coverImage:
-      'https://images.unsplash.com/photo-1529693662653-9d480530a697?auto=format&fit=crop&w=1200&q=70',
-    population: 60,
-  },
-  {
-    id: 'zhouzhuang',
-    nameEn: 'Zhouzhuang',
-    nameZh: '周庄',
-    province: 'Jiangsu',
-    lng: 120.8446,
-    lat: 31.1164,
-    distanceKm: 70,
-    trainMinutes: 0,
-    driveMinutes: 80,
-    tags: ['ancient-town', 'food'],
-    highlights: [
-      '900-year-old Shuang Bridge (Twin Bridges)',
-      'Shen Hall wealthy-merchant residence',
-      'Wansan pork-knuckle special',
-    ],
-    coverImage:
-      'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=1200&q=70',
-    population: 30,
-  },
-  {
-    id: 'moganshan',
-    nameEn: 'Moganshan',
-    nameZh: '莫干山',
-    province: 'Zhejiang',
-    lng: 119.8824,
-    lat: 30.6093,
-    distanceKm: 195,
-    trainMinutes: 0,
-    driveMinutes: 180,
-    tags: ['mountain', 'nature'],
-    highlights: [
-      'Bamboo-forest hikes on mist-capped ridges',
-      'Boutique hilltop guesthouses (民宿)',
-      'Sword Pond + Jianchi waterfall',
-    ],
-    coverImage:
-      'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1200&q=70',
-    population: 8,
-  },
-  {
-    id: 'tianmushan',
-    nameEn: 'Tianmushan',
-    nameZh: '天目山',
-    province: 'Zhejiang',
-    lng: 119.4340,
-    lat: 30.3273,
-    distanceKm: 260,
-    trainMinutes: 0,
-    driveMinutes: 240,
-    tags: ['mountain', 'nature'],
-    highlights: [
-      'Thousand-year cryptomeria forest',
-      'West Tianmu summit sunrise',
-      'Stay in a forest-bath eco-lodge',
-    ],
-    coverImage:
-      'https://images.unsplash.com/photo-1501554728187-ce583db33af7?auto=format&fit=crop&w=1200&q=70',
-    population: 12,
-  },
-  {
-    id: 'putuoshan',
-    nameEn: 'Putuoshan',
-    nameZh: '普陀山',
-    province: 'Zhejiang',
-    lng: 122.3893,
-    lat: 30.0083,
-    distanceKm: 245,
-    trainMinutes: 0,
-    driveMinutes: 330,
-    tags: ['mountain', 'beach', 'nature'],
-    highlights: [
-      'One-thousand-hand Guanyin statue',
-      'Puji Temple incense and prayer',
-      'Sandy beach between pine-covered cliffs',
-    ],
-    coverImage:
-      'https://images.unsplash.com/photo-1519817650390-64a93db51149?auto=format&fit=crop&w=1200&q=70',
-    population: 3,
-  },
-  {
-    id: 'anji',
-    nameEn: 'Anji',
-    nameZh: '安吉',
-    province: 'Zhejiang',
-    lng: 119.6858,
-    lat: 30.6378,
-    distanceKm: 225,
-    trainMinutes: 0,
-    driveMinutes: 215,
-    tags: ['mountain', 'nature'],
-    highlights: [
-      'Crouching Tiger bamboo sea (Da Zhu Hai)',
-      'Hidden Dragon Hundred-Waterfall hike',
-      'Overnight at Naked Stables eco-retreat',
-    ],
-    coverImage:
-      'https://images.unsplash.com/photo-1470770841072-f978cf4d019e?auto=format&fit=crop&w=1200&q=70',
-    population: 580,
-  },
-  {
-    id: 'lishui',
-    nameEn: 'Lishui',
-    nameZh: '丽水',
-    province: 'Zhejiang',
-    lng: 119.9229,
-    lat: 28.4518,
-    distanceKm: 300,
-    trainMinutes: 180,
-    driveMinutes: 360,
-    tags: ['mountain', 'nature', 'ancient-town'],
-    highlights: [
-      'Yunhe terraced rice fields at dawn',
-      'Songyang ancient villages',
-      'Shiniuyan sheer granite cliffs',
-    ],
-    coverImage:
-      'https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?auto=format&fit=crop&w=1200&q=70',
-    population: 2510,
-  },
-];
+export function inferTags(osmTags: Record<string, string>): ActivityTag[] {
+  const result: ActivityTag[] = [];
+
+  if (osmTags.historic) result.push('historic');
+
+  if (osmTags.natural === 'peak' || osmTags.natural === 'volcano') result.push('mountain');
+
+  if (osmTags.natural === 'beach') result.push('beach');
+
+  if (osmTags.tourism === 'viewpoint') result.push('viewpoint');
+
+  if (osmTags.tourism === 'museum' || osmTags.tourism === 'gallery') result.push('museum');
+
+  if (
+    osmTags.leisure === 'nature_reserve' ||
+    osmTags.leisure === 'garden' ||
+    osmTags.leisure === 'park' ||
+    osmTags.natural === 'waterfall' ||
+    osmTags.natural === 'cave_entrance' ||
+    osmTags.natural === 'hot_spring'
+  ) result.push('nature');
+
+  if (
+    (osmTags.tourism === 'attraction' ||
+      osmTags.tourism === 'artwork' ||
+      osmTags.tourism === 'theme_park' ||
+      osmTags.tourism === 'zoo' ||
+      osmTags.tourism === 'aquarium' ||
+      osmTags.amenity === 'arts_centre' ||
+      osmTags.amenity === 'theatre') &&
+    !result.includes('museum')
+  ) result.push('cultural');
+
+  if (result.length === 0) result.push('cultural');
+  return result;
+}

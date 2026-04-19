@@ -9,18 +9,12 @@ interface Props {
   spinning: boolean;
 }
 
-/**
- * Fake slot-machine reel. The winner is decided outside;
- * we just cycle names faster at the start and slow down at the end
- * before revealing the locked pick.
- */
 export default function SlotMachine({ pool, winner, progress, spinning }: Props) {
   const [idx, setIdx] = useState(0);
   const lastTickRef = useRef(0);
   const accumRef = useRef(0);
 
-  // Easing: frames per second starts high, ends low.
-  // intervalMs goes from ~40ms at progress=0 to ~220ms at progress=1.
+  // Interval eases from ~40 ms (fast) to ~220 ms (slow) as progress → 1
   const intervalMs = 40 + Math.pow(progress, 2) * 200;
 
   const names = useMemo(() => {
@@ -50,14 +44,17 @@ export default function SlotMachine({ pool, winner, progress, spinning }: Props)
     };
   }, [spinning, intervalMs, names.length]);
 
-  // When the spin ends and we have a winner, force-show the winner.
   const showWinner = !spinning && winner;
   const displayed = showWinner ? winner : names[idx % Math.max(names.length, 1)];
 
   if (!displayed) return null;
 
-  // Blur decays as progress approaches 1 — names come into focus.
   const blurPx = spinning ? Math.max(0, 6 * (1 - progress)) : 0;
+
+  // Show a short type label while spinning, "Your destination" when revealed
+  const subLabel = showWinner
+    ? 'Your destination'
+    : displayed.tags[0] ?? 'place';
 
   return (
     <div className="relative h-36 flex items-center justify-center overflow-hidden rounded-2xl bg-ink-800/60 border border-cream/10">
@@ -76,11 +73,13 @@ export default function SlotMachine({ pool, winner, progress, spinning }: Props)
         className="text-center px-4"
       >
         <div className="text-3xl font-extrabold text-cream tracking-wide">
-          {displayed.nameEn}
+          {displayed.name}
         </div>
-        <div className="text-lg text-cream/70 mt-1">{displayed.nameZh}</div>
         <div className="text-[10px] uppercase tracking-[0.3em] text-cream/40 mt-2">
-          {showWinner ? 'Your destination · 命中' : displayed.province}
+          {subLabel}
+          {!showWinner && displayed.distanceKm > 0 && (
+            <span className="ml-2 text-cream/30">· {displayed.distanceKm} km</span>
+          )}
         </div>
       </motion.div>
     </div>
