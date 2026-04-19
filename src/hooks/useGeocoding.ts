@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 
 export interface GeocodingResult {
   displayName: string;
@@ -15,19 +15,27 @@ interface State {
 
 export function useGeocoding() {
   const [state, setState] = useState<State>({ status: 'idle', results: [], error: null });
+  const abortRef = useRef<AbortController | null>(null);
 
   const search = useCallback(async (query: string) => {
     if (!query.trim()) {
       setState({ status: 'idle', results: [], error: null });
       return;
     }
+
+    // Cancel any in-flight request so stale responses don't overwrite newer ones.
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
     setState({ status: 'loading', results: [], error: null });
     try {
       const url =
         `https://nominatim.openstreetmap.org/search` +
         `?q=${encodeURIComponent(query)}&format=json&limit=5&addressdetails=0`;
       const res = await fetch(url, {
-        headers: { 'Accept-Language': 'en', 'User-Agent': 'travel-roulette/1.0' },
+        headers: { 'Accept-Language': 'en' },
+        signal: controller.signal,
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data: Array<{ display_name: string; lat: string; lon: string }> = await res.json();
@@ -41,7 +49,8 @@ export function useGeocoding() {
         })),
         error: null,
       });
-    } catch {
+    } catch (err) {
+      if ((err as Error).name === 'AbortError') return;
       setState({
         status: 'error',
         results: [],
@@ -51,6 +60,7 @@ export function useGeocoding() {
   }, []);
 
   const clear = useCallback(() => {
+    abortRef.current?.abort();
     setState({ status: 'idle', results: [], error: null });
   }, []);
 

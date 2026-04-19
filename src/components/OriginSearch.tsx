@@ -39,6 +39,13 @@ export default function OriginSearch({ origin, onSelect, disabled }: Props) {
     if (e.key === 'Enter' && results.length > 0) handleSelect(results[0]);
   };
 
+  // Clear debounce on unmount to avoid setState on a gone component.
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, []);
+
   // Close dropdown on outside click
   useEffect(() => {
     const handle = (e: MouseEvent) => {

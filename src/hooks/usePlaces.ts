@@ -27,6 +27,8 @@ interface OverpassElement {
   tags?: Record<string, string>;
 }
 
+const OVERPASS_DEBOUNCE_MS = 400;
+
 function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 6371;
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
@@ -59,6 +61,7 @@ export function usePlaces(origin: Origin | null, filters: PlacesFilters) {
   const [state, setState] = useState<State>({ places: [], status: 'idle', error: null });
   const activitiesKey = [...filters.activities].sort().join(',');
   const abortRef = useRef<AbortController | null>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   useEffect(() => {
     if (!origin) {
@@ -66,74 +69,89 @@ export function usePlaces(origin: Origin | null, filters: PlacesFilters) {
       return;
     }
 
+    // Debounce: cancel pending timeout and in-flight request on rapid changes.
+    clearTimeout(debounceRef.current);
     abortRef.current?.abort();
-    const controller = new AbortController();
-    abortRef.current = controller;
 
     setState((s) => ({ ...s, status: 'loading', error: null }));
 
-    const radiusM = filters.radiusKm * 1000;
-    const query = buildQuery(origin.lat, origin.lng, radiusM);
+    const controller = new AbortController();
+    abortRef.current = controller;
 
-    fetch('https://overpass-api.de/api/interpreter', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: `data=${encodeURIComponent(query)}`,
-      signal: controller.signal,
-    })
-      .then((res) => {
-        if (!res.ok) throw new Error(`Overpass error ${res.status}`);
-        return res.json() as Promise<{ elements: OverpassElement[] }>;
+    debounceRef.current = setTimeout(() => {
+      const radiusM = filters.radiusKm * 1000;
+      const query = buildQuery(origin.lat, origin.lng, radiusM);
+
+      fetch('https://overpass-api.de/api/interpreter', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `data=${encodeURIComponent(query)}`,
+        signal: controller.signal,
       })
-      .then((data) => {
-        const seen = new Set<string>();
-        const places: City[] = [];
+        .then((res) => {
+          if (!res.ok) throw new Error(`Overpass error ${res.status}`);
+          return res.json() as Promise<{ elements: OverpassElement[] }>;
+        })
+        .then((data) => {
+          // Deduplicate by type/id (unique OSM identity) to avoid collisions
+          // between features that share a name across different elements or languages.
+          const seenIds = new Set<string>();
+          const seenNames = new Set<string>();
+          const places: City[] = [];
 
-        for (const el of data.elements) {
-          const osm = el.tags ?? {};
-          const name = osm.name?.trim();
-          if (!name || name.length < 2) continue;
+          for (const el of data.elements) {
+            const osmId = `${el.type}/${el.id}`;
+            if (seenIds.has(osmId)) continue;
+            seenIds.add(osmId);
 
-          const lat = el.type === 'node' ? el.lat : el.center?.lat;
-          const lng = el.type === 'node' ? el.lon : el.center?.lon;
-          if (lat === undefined || lng === undefined) continue;
+            const osm = el.tags ?? {};
+            const name = osm.name?.trim();
+            if (!name || name.length < 2) continue;
 
-          // Deduplicate by normalised name
-          const key = name.toLowerCase();
-          if (seen.has(key)) continue;
-          seen.add(key);
+            const lat = el.type === 'node' ? el.lat : el.center?.lat;
+            const lng = el.type === 'node' ? el.lon : el.center?.lon;
+            if (lat === undefined || lng === undefined) continue;
 
-          const tags = inferTags(osm);
+            // Secondary dedupe: drop features with identical display names that are
+            // very close together (same place mapped as both node and way).
+            const nameKey = name.toLowerCase();
+            if (seenNames.has(nameKey)) continue;
+            seenNames.add(nameKey);
 
-          // Client-side activity filter
-          if (
-            filters.activities.length > 0 &&
-            !tags.some((t) => filters.activities.includes(t))
-          ) continue;
+            const tags = inferTags(osm);
 
-          places.push({
-            id: `${el.type}/${el.id}`,
-            name,
-            lat,
-            lng,
-            distanceKm: Math.round(haversineKm(origin.lat, origin.lng, lat, lng)),
-            tags,
-            osmTags: osm,
+            if (
+              filters.activities.length > 0 &&
+              !tags.some((t) => filters.activities.includes(t))
+            ) continue;
+
+            places.push({
+              id: osmId,
+              name,
+              lat,
+              lng,
+              distanceKm: Math.round(haversineKm(origin.lat, origin.lng, lat, lng)),
+              tags,
+              osmTags: osm,
+            });
+          }
+
+          setState({ places, status: 'ready', error: null });
+        })
+        .catch((err: Error) => {
+          if (err.name === 'AbortError') return;
+          setState({
+            places: [],
+            status: 'error',
+            error: 'Could not load places — check your connection and try again.',
           });
-        }
-
-        setState({ places, status: 'ready', error: null });
-      })
-      .catch((err: Error) => {
-        if (err.name === 'AbortError') return;
-        setState({
-          places: [],
-          status: 'error',
-          error: 'Could not load places — check your connection and try again.',
         });
-      });
+    }, OVERPASS_DEBOUNCE_MS);
 
-    return () => controller.abort();
+    return () => {
+      clearTimeout(debounceRef.current);
+      controller.abort();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [origin?.lat, origin?.lng, filters.radiusKm, activitiesKey]);
 

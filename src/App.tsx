@@ -31,7 +31,7 @@ export default function App() {
       `https://en.wikipedia.org/w/api.php?action=query` +
       `&titles=${encodeURIComponent(winner.name)}` +
       `&prop=pageimages|extracts` +
-      `&format=json&pithumbsize=1200&exintro=1&exchars=400&origin=*`,
+      `&format=json&pithumbsize=1200&exintro=1&explaintext=1&exchars=350&origin=*`,
       { signal: ctrl.signal },
     )
       .then((r) => r.json())
@@ -44,9 +44,7 @@ export default function App() {
             ? {
                 ...prev,
                 image: page.thumbnail?.source ?? prev.image,
-                description: page.extract
-                  ? page.extract.replace(/<[^>]*>/g, '').replace(/\n+/g, ' ').slice(0, 350)
-                  : prev.description,
+                description: page.extract ?? prev.description,
               }
             : null,
         );
