@@ -1,51 +1,57 @@
-# 轮盘旅行 · Roulette Trip
+# Roulette Trip
 
-A Russian-roulette-style day-trip planner seeded from Shanghai. Set your criteria, hit spin, and one randomly chosen destination is revealed with drama.
+A day-trip roulette — enter any city, set a radius, hit spin. One randomly chosen nearby attraction is revealed with a slot-machine animation, a Wikipedia photo, and a description.
+
+**[Try it live →](https://augustin690.github.io/travel-russian-roulette/)**
+
+## How it works
+
+1. Type your city (Paris, Tokyo, São Paulo, anywhere)
+2. Set a search radius and optionally filter by activity type
+3. Hit **SPIN** — the app fetches nearby points of interest and picks one at random
+4. The result card shows the place, its tags, an auto-loaded Wikipedia photo and description, an OpenStreetMap embed, and a directions link
+
+No account or API key required.
 
 ## Stack
-- React 18 + Vite (TypeScript)
-- Tailwind CSS
-- Framer Motion
-- canvas-confetti
-- Amap (高德) Web JS API (embedded map)
+
+- **React 18 + Vite** (TypeScript)
+- **Tailwind CSS** + Framer Motion + canvas-confetti
+- **Nominatim** (OSM geocoding) — city search autocomplete
+- **Overpass API** — live POI data (historic sites, nature, museums, beaches, mountains, viewpoints, cultural attractions)
+- **OpenStreetMap** — embedded map on the result card
+- **Wikipedia API** — photo and description enrichment for the selected place
 
 ## Quick start
+
 ```bash
 npm install
 npm run dev
 ```
 
-## Deploy to GitHub Pages
-This repository includes a GitHub Actions workflow at `.github/workflows/deploy.yml` that deploys on pushes to `main`.
-
-One-time GitHub setup:
-1. Go to **Settings → Pages**.
-2. Set **Source** to **GitHub Actions**.
-
-Then push to `main` and the site will be published to:
-`https://<username>.github.io/<repository-name>/`
-
-## Configuration
-Paste your Amap Web JS API key into `src/config.ts`:
-```ts
-export const AMAP_KEY = 'YOUR_AMAP_JS_API_KEY_HERE';
-```
-Register a free key at https://lbs.amap.com/ under Web端(JS API). Until you do, the card shows a placeholder instead of a live map — everything else works.
+No `.env` needed — all data sources are free and open.
 
 ## Structure
+
 ```
 src/
-  data/cities.ts         25-city seed set around Shanghai
-  components/
-    FilterPanel.tsx      radius slider, transport toggle, activity chips
-    SpinButton.tsx       the big red button
-    SlotMachine.tsx      cycling-names reveal animation
-    ResultCard.tsx       bottom-sheet result
-    MapEmbed.tsx         Amap integration — paste your key in src/config.ts
+  data/cities.ts              City type + OSM → ActivityTag inference
   hooks/
-    useFilteredCities.ts pool based on radius / transport / tags
-    useRoulette.ts       spin lifecycle + confetti
-  App.tsx
-  main.tsx
-  config.ts              AMAP_KEY lives here
+    useGeocoding.ts           Nominatim autocomplete (abort-on-stale)
+    usePlaces.ts              Overpass fetch, debounced + abort-safe
+    useRoulette.ts            Spin lifecycle + confetti
+  components/
+    OriginSearch.tsx          City search input with dropdown
+    FilterPanel.tsx           Radius slider + activity tag filters
+    SpinButton.tsx            The big red button
+    SlotMachine.tsx           Cycling-names reveal animation
+    ResultCard.tsx            Bottom-sheet result with map + directions
+    MapEmbed.tsx              OpenStreetMap iframe
+  App.tsx                     State orchestration + Wikipedia enrichment
 ```
+
+## Deployment
+
+Pushes to `main` deploy automatically to GitHub Pages via `.github/workflows/deploy.yml`.
+
+To enable on a fork: go to **Settings → Pages** and set **Source** to **GitHub Actions**.
