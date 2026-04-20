@@ -6,7 +6,11 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:integration": "vitest run --include 'tests/integration/**/*.test.ts' --testTimeout=90000",
+    "test:report": "vitest run --include 'tests/report/**/*.test.ts' --testTimeout=120000 --reporter=verbose"
   },
   "dependencies": {
     "canvas-confetti": "^1.9.3",
@@ -23,6 +27,7 @@
     "postcss": "^8.4.39",
     "tailwindcss": "^3.4.6",
     "typescript": "^5.5.3",
-    "vite": "^5.3.4"
+    "vite": "^5.3.4",
+    "vitest": "^4.1.4"
   }
 }
