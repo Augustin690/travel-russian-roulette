@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { inferTags, type ActivityTag, type City } from '../data/cities';
+import { haversineKm, buildOverpassQuery } from '../lib/geoUtils';
 
 export interface Origin {
   lat: number;
@@ -29,34 +30,6 @@ interface OverpassElement {
 
 const OVERPASS_DEBOUNCE_MS = 400;
 
-function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
-  const R = 6371;
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLng = ((lng2 - lng1) * Math.PI) / 180;
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLng / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
-
-function buildQuery(lat: number, lng: number, radiusM: number): string {
-  const a = `(around:${radiusM},${lat},${lng})`;
-  return `[out:json][timeout:30];
-(
-  node["name"]["tourism"~"^(attraction|viewpoint|museum|gallery|theme_park|zoo|aquarium)$"]${a};
-  node["name"]["historic"~"^(castle|ruins|monument|memorial|archaeological_site|fort|tower|city_gate)$"]${a};
-  node["name"]["natural"~"^(peak|beach|cave_entrance|hot_spring|waterfall|volcano)$"]${a};
-  node["name"]["leisure"~"^(nature_reserve|garden)$"]${a};
-  way["name"]["tourism"~"^(attraction|museum|gallery|viewpoint)$"]${a};
-  way["name"]["historic"~"^(castle|ruins|monument|archaeological_site|fort)$"]${a};
-  way["name"]["natural"="beach"]${a};
-  way["name"]["leisure"~"^(nature_reserve|garden)$"]${a};
-);
-out center tags 100;`;
-}
-
 export function usePlaces(origin: Origin | null, filters: PlacesFilters) {
   const [state, setState] = useState<State>({ places: [], status: 'idle', error: null });
   const activitiesKey = [...filters.activities].sort().join(',');
@@ -80,7 +53,7 @@ export function usePlaces(origin: Origin | null, filters: PlacesFilters) {
 
     debounceRef.current = setTimeout(() => {
       const radiusM = filters.radiusKm * 1000;
-      const query = buildQuery(origin.lat, origin.lng, radiusM);
+      const query = buildOverpassQuery(origin.lat, origin.lng, radiusM);
 
       fetch('https://overpass-api.de/api/interpreter', {
         method: 'POST',
