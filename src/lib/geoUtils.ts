@@ -12,7 +12,7 @@ export function haversineKm(lat1: number, lng1: number, lat2: number, lng2: numb
 
 export function buildOverpassQuery(lat: number, lng: number, radiusM: number): string {
   const a = `(around:${radiusM},${lat},${lng})`;
-  return `[out:json][timeout:30];
+  return `[out:json][timeout:90];
 (
   node["name"]["tourism"~"^(attraction|viewpoint|museum|gallery|theme_park|zoo|aquarium)$"]${a};
   node["name"]["historic"~"^(castle|ruins|monument|memorial|archaeological_site|fort|tower|city_gate)$"]${a};

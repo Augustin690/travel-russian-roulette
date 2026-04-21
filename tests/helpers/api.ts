@@ -1,7 +1,58 @@
 // Direct API helpers that mirror usePlaces / useGeocoding logic without React hooks.
+import https from 'node:https';
 import type { ActivityTag, City } from '../../src/data/cities';
 import { inferTags } from '../../src/data/cities';
 import { haversineKm, buildOverpassQuery } from '../../src/lib/geoUtils';
+
+export const sleep = (ms: number): Promise<void> =>
+  new Promise((r) => setTimeout(r, ms));
+
+function httpsPostOnce(url: string, body: string, headers: Record<string, string>): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const bodyBuf = Buffer.from(body, 'utf8');
+    const parsed = new URL(url);
+    const req = https.request(
+      {
+        hostname: parsed.hostname,
+        path: parsed.pathname + parsed.search,
+        method: 'POST',
+        headers: {
+          ...headers,
+          'Content-Length': bodyBuf.byteLength,
+        },
+      },
+      (res) => {
+        if (res.statusCode && (res.statusCode < 200 || res.statusCode >= 300)) {
+          reject(new Error(`Overpass ${res.statusCode}: ${res.statusMessage}`));
+          res.resume();
+          return;
+        }
+        const chunks: Buffer[] = [];
+        res.on('data', (chunk: Buffer) => chunks.push(chunk));
+        res.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')));
+      },
+    );
+    req.on('error', reject);
+    req.write(bodyBuf);
+    req.end();
+  });
+}
+
+async function httpsPost(url: string, body: string, headers: Record<string, string>): Promise<string> {
+  const RETRY_DELAYS_MS = [30_000, 60_000];
+  let lastError: Error | undefined;
+  for (let attempt = 0; attempt <= RETRY_DELAYS_MS.length; attempt++) {
+    try {
+      return await httpsPostOnce(url, body, headers);
+    } catch (err) {
+      lastError = err as Error;
+      const isRetriable = lastError.message.includes('429') || lastError.message.includes('504');
+      if (!isRetriable || attempt === RETRY_DELAYS_MS.length) break;
+      await sleep(RETRY_DELAYS_MS[attempt]);
+    }
+  }
+  throw lastError;
+}
 
 interface OverpassElement {
   type: 'node' | 'way' | 'relation';
@@ -20,14 +71,12 @@ export async function fetchPlaces(
 ): Promise<City[]> {
   const query = buildOverpassQuery(lat, lng, radiusKm * 1000);
 
-  const res = await fetch('https://overpass-api.de/api/interpreter', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: `data=${encodeURIComponent(query)}`,
-  });
-
-  if (!res.ok) throw new Error(`Overpass ${res.status}: ${res.statusText}`);
-  const data = (await res.json()) as { elements: OverpassElement[] };
+  const rawBody = await httpsPost(
+    'https://overpass-api.de/api/interpreter',
+    `data=${encodeURIComponent(query)}`,
+    { 'Content-Type': 'application/x-www-form-urlencoded' },
+  );
+  const data = JSON.parse(rawBody) as { elements: OverpassElement[] };
 
   const seenIds = new Set<string>();
   const seenNames = new Set<string>();
@@ -102,6 +151,3 @@ export async function geocodeCity(query: string): Promise<GeocodingResult | null
     displayName: results[0].display_name,
   };
 }
-
-export const sleep = (ms: number): Promise<void> =>
-  new Promise((r) => setTimeout(r, ms));

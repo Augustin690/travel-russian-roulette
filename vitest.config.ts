@@ -8,5 +8,6 @@ export default defineConfig({
     hookTimeout: 5000,
     reporters: ['verbose'],
     sequence: { concurrent: false },
+    fileParallelism: false,
   },
 });
