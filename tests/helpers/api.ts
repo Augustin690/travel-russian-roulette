@@ -82,7 +82,7 @@ export async function fetchPlaces(
   const seenNames = new Set<string>();
   const places: City[] = [];
 
-  for (const el of data.elements) {
+  for (const el of (data.elements ?? [])) {
     const osmId = `${el.type}/${el.id}`;
     if (seenIds.has(osmId)) continue;
     seenIds.add(osmId);
