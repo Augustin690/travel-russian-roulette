@@ -52,7 +52,7 @@ function buildQuery(lat: number, lng: number, outerM: number, innerM?: number): 
   const body = innerM
     ? `(\n${tagClauses(outerArea)}\n) - (\n${tagClauses(`(around:${innerM},${lat},${lng})`)}\n);`
     : `(\n${tagClauses(outerArea)}\n);`;
-  return `[out:json][timeout:30];\n${body}\nout center tags ${FETCH_LIMIT};`;
+  return `[out:json][timeout:30];\n${body}\nout center ${FETCH_LIMIT};`;
 }
 
 // Parses raw Overpass elements into City objects, deduplicating against seenIds/seenNames
@@ -162,6 +162,7 @@ export function usePlaces(origin: Origin | null, filters: PlacesFilters) {
       cachedPlacesRef.current = [];
       cachedIdsRef.current = new Set();
       cachedNamesRef.current = new Set();
+      fetchedRadiusKmRef.current = 0;
       fetchedOriginKeyRef.current = oKey;
     }
 
