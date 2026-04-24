@@ -52,7 +52,7 @@ function buildQuery(lat: number, lng: number, outerM: number, innerM?: number): 
   const body = innerM
     ? `(\n${tagClauses(outerArea)}\n) - (\n${tagClauses(`(around:${innerM},${lat},${lng})`)}\n);`
     : `(\n${tagClauses(outerArea)}\n);`;
-  return `[out:json][timeout:30];\n${body}\nout center ${FETCH_LIMIT};`;
+  return `[out:json][timeout:90];\n${body}\nout center ${FETCH_LIMIT};`;
 }
 
 // Parses raw Overpass elements into City objects, deduplicating against seenIds/seenNames
