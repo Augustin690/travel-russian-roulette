@@ -31,9 +31,6 @@ interface OverpassElement {
 const OVERPASS_DEBOUNCE_MS = 400;
 const SAMPLE_SIZE = 50;
 const FETCH_LIMIT = 70;
-// When the new radius exceeds this multiple of the cached radius, do a full
-// refetch instead of an annulus query (huge rings aren't worth the complexity).
-const ANNULUS_MAX_RATIO = 2;
 
 // Returns Overpass QL clauses for all tracked tag types, using the given area filter.
 const tagClauses = (area: string) =>
@@ -46,13 +43,10 @@ const tagClauses = (area: string) =>
   way["name"]["natural"="beach"]${area};
   way["name"]["leisure"~"^(nature_reserve|garden)$"]${area};`;
 
-// Builds a full-disk or annulus (outerM minus innerM) Overpass query.
-function buildQuery(lat: number, lng: number, outerM: number, innerM?: number): string {
-  const outerArea = `(around:${outerM},${lat},${lng})`;
-  const body = innerM
-    ? `(\n${tagClauses(outerArea)}\n) - (\n${tagClauses(`(around:${innerM},${lat},${lng})`)}\n);`
-    : `(\n${tagClauses(outerArea)}\n);`;
-  return `[out:json][timeout:90];\n${body}\nout center ${FETCH_LIMIT};`;
+// Builds a full-disk Overpass query.
+function buildQuery(lat: number, lng: number, radiusM: number): string {
+  const area = `(around:${radiusM},${lat},${lng})`;
+  return `[out:json][timeout:90];\n(\n${tagClauses(area)}\n);\nout center ${FETCH_LIMIT};`;
 }
 
 // Parses raw Overpass elements into City objects, deduplicating against seenIds/seenNames
@@ -153,27 +147,19 @@ export function usePlaces(origin: Origin | null, filters: PlacesFilters) {
       return;
     }
 
-    // Radius grew: use an annulus query if within 2× the cached radius,
-    // otherwise reset the cache and do a full refetch.
-    const useAnnulus =
-      hasCachedData && filters.radiusKm <= fetchedRadiusKmRef.current * ANNULUS_MAX_RATIO;
-
-    if (!useAnnulus) {
-      cachedPlacesRef.current = [];
-      cachedIdsRef.current = new Set();
-      cachedNamesRef.current = new Set();
-      fetchedRadiusKmRef.current = 0;
-      fetchedOriginKeyRef.current = oKey;
-    }
+    // Radius grew: reset cache and do a fresh full-disk query.
+    cachedPlacesRef.current = [];
+    cachedIdsRef.current = new Set();
+    cachedNamesRef.current = new Set();
+    fetchedRadiusKmRef.current = 0;
+    fetchedOriginKeyRef.current = oKey;
 
     setState((s) => ({ ...s, status: 'loading', error: null }));
 
     const controller = new AbortController();
     abortRef.current = controller;
 
-    const outerM = filters.radiusKm * 1000;
-    const innerM = useAnnulus ? fetchedRadiusKmRef.current * 1000 : undefined;
-    const query = buildQuery(origin.lat, origin.lng, outerM, innerM);
+    const query = buildQuery(origin.lat, origin.lng, filters.radiusKm * 1000);
 
     debounceRef.current = setTimeout(() => {
       fetch('https://overpass-api.de/api/interpreter', {
