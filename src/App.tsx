@@ -6,16 +6,18 @@ import SlotMachine from './components/SlotMachine';
 import ResultCard from './components/ResultCard';
 import { usePlaces, type Origin, type PlacesFilters } from './hooks/usePlaces';
 import { useRoulette } from './hooks/useRoulette';
+import { useLang } from './LangContext';
 import type { City } from './data/cities';
 
 export default function App() {
+  const { lang, t, setLang } = useLang();
   const [origin, setOrigin] = useState<Origin | null>(null);
   const [filters, setFilters] = useState<PlacesFilters>({
     radiusKm: 100,
     activities: [],
   });
 
-  const { places, status: placesStatus, error: placesError } = usePlaces(origin, filters);
+  const { places, status: placesStatus } = usePlaces(origin, filters);
   const { state, winner, spin, reset, progress } = useRoulette();
   const [spinError, setSpinError] = useState<string | null>(null);
 
@@ -59,19 +61,19 @@ export default function App() {
 
   const handleSpin = () => {
     if (!origin) {
-      setSpinError('Set your starting city first');
+      setSpinError(t.errSetCity);
       return;
     }
     if (placesStatus === 'loading') {
-      setSpinError('Still loading places — wait a moment');
+      setSpinError(t.errStillLoading);
       return;
     }
     if (placesStatus === 'error') {
-      setSpinError(placesError ?? 'Could not load places');
+      setSpinError(t.errConnection);
       return;
     }
     if (places.length === 0) {
-      setSpinError('No places found — try widening your radius or changing filters');
+      setSpinError(t.errNoPlaces);
       return;
     }
     setSpinError(null);
@@ -105,13 +107,22 @@ export default function App() {
       <div className="w-full max-w-[420px] min-h-full px-5 pt-10 pb-32 flex flex-col">
         {/* Header */}
         <header className="mb-8">
-          <div className="flex items-baseline gap-2">
-            <h1 className="text-2xl font-extrabold text-cream">轮盘旅行</h1>
-            <span className="text-sm text-cream/50">Roulette Trip</span>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h1 className="text-2xl font-extrabold text-cream">{t.appTitle}</h1>
+              <p className="text-xs text-cream/50 mt-1 leading-relaxed">{t.appSubtitle}</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setLang(lang === 'en' ? 'fr' : 'en')}
+              className="shrink-0 mt-0.5 px-2.5 py-1 rounded-lg bg-ink-700 border border-cream/10
+                text-[11px] font-semibold tracking-widest text-cream/60
+                hover:text-cream hover:border-cream/30 transition"
+              aria-label="Switch language"
+            >
+              {lang === 'en' ? 'FR' : 'EN'}
+            </button>
           </div>
-          <p className="text-xs text-cream/50 mt-1 leading-relaxed">
-            Set your city, spin the wheel, and discover your next day trip.
-          </p>
         </header>
 
         {/* Slot machine (only visible during spin / reveal) */}

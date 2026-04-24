@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion';
+import { useLang } from '../LangContext';
 
 interface Props {
   onClick: () => void;
@@ -8,6 +9,7 @@ interface Props {
 }
 
 export default function SpinButton({ onClick, disabled, spinning, error }: Props) {
+  const { t } = useLang();
   return (
     <div className="flex flex-col items-center">
       <motion.button
@@ -33,10 +35,10 @@ export default function SpinButton({ onClick, disabled, spinning, error }: Props
         <div className="absolute inset-2 rounded-full border-2 border-dashed border-cream/20" />
         <div className="text-center leading-tight">
           <div className="text-3xl tracking-widest">
-            {spinning ? '···' : 'SPIN'}
+            {spinning ? t.spinningLabel : t.spinLabel}
           </div>
           <div className="text-[11px] tracking-[0.4em] mt-1 opacity-80">
-            {spinning ? '旋转中' : '开始'}
+            {spinning ? t.spinningSpub : t.spinSub}
           </div>
         </div>
       </motion.button>

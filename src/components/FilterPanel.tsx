@@ -4,6 +4,7 @@ import type { ActivityTag } from '../data/cities';
 import type { PlacesFilters } from '../hooks/usePlaces';
 import OriginSearch from './OriginSearch';
 import type { Origin } from '../hooks/usePlaces';
+import { useLang } from '../LangContext';
 
 interface Props {
   origin: Origin | null;
@@ -24,16 +25,6 @@ const ALL_TAGS: ActivityTag[] = [
   'cultural',
   'viewpoint',
 ];
-
-const TAG_LABEL: Record<ActivityTag, string> = {
-  historic: 'Historic',
-  nature: 'Nature',
-  museum: 'Museum',
-  beach: 'Beach',
-  mountain: 'Mountain',
-  cultural: 'Cultural',
-  viewpoint: 'Viewpoint',
-};
 
 export function tagColor(tag: ActivityTag): string {
   const map: Record<ActivityTag, string> = {
@@ -57,6 +48,7 @@ export default function FilterPanel({
   placesStatus,
   disabled,
 }: Props) {
+  const { t } = useLang();
   const [tipOpen, setTipOpen] = useState(false);
 
   const toggleActivity = (tag: ActivityTag) => {
@@ -69,12 +61,12 @@ export default function FilterPanel({
 
   const countLabel = () => {
     if (!origin) return null;
-    if (placesStatus === 'loading') return <span className="text-cream/40">searching…</span>;
-    if (placesStatus === 'error') return <span className="text-vermilion">error</span>;
+    if (placesStatus === 'loading') return <span className="text-cream/40">{t.searching}</span>;
+    if (placesStatus === 'error') return <span className="text-vermilion">{t.errorStatus}</span>;
     return (
       <>
         <span className="text-vermilion">{eligibleCount}</span>
-        <span className="text-cream/50"> places</span>
+        <span className="text-cream/50"> {t.placesWord(eligibleCount)}</span>
       </>
     );
   };
@@ -85,7 +77,7 @@ export default function FilterPanel({
       {/* Origin city */}
       <section>
         <h3 className="text-sm font-semibold tracking-wide uppercase text-cream/80 mb-2">
-          Starting from
+          {t.startingFrom}
         </h3>
         <OriginSearch origin={origin} onSelect={onOriginSelect} disabled={disabled} />
       </section>
@@ -95,7 +87,7 @@ export default function FilterPanel({
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-1.5">
             <h3 className="text-sm font-semibold tracking-wide uppercase text-cream/80">
-              Radius
+              {t.radius}
             </h3>
             <button
               type="button"
@@ -125,7 +117,7 @@ export default function FilterPanel({
               exit={{ opacity: 0, y: -4 }}
               className="mb-2 text-[11px] leading-snug text-cream/60 bg-ink-700/70 border border-cream/10 rounded-lg px-3 py-2"
             >
-              Crow-flies distance from your chosen city. Actual travel time depends on terrain and transport options.
+              {t.radiusTip}
             </motion.div>
           )}
         </AnimatePresence>
@@ -151,17 +143,17 @@ export default function FilterPanel({
       <section>
         <div className="flex items-baseline justify-between mb-2">
           <h3 className="text-sm font-semibold tracking-wide uppercase text-cream/80">
-            Activity
+            {t.activity}
           </h3>
           {filters.activities.length === 0 ? (
-            <span className="text-[10px] text-cream/40">Any</span>
+            <span className="text-[10px] text-cream/40">{t.anyActivity}</span>
           ) : (
             <button
               type="button"
               onClick={() => onChange({ ...filters, activities: [] })}
               className="text-[10px] text-vermilion hover:underline"
             >
-              Clear
+              {t.clearActivity}
             </button>
           )}
         </div>
@@ -180,7 +172,7 @@ export default function FilterPanel({
                       : 'bg-ink-700 text-cream/70 hover:bg-ink-700/70'
                   }`}
               >
-                {TAG_LABEL[tag]}
+                {t.tagLabels[tag]}
               </button>
             );
           })}

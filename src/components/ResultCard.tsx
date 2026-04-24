@@ -2,6 +2,7 @@ import { motion } from 'framer-motion';
 import type { City } from '../data/cities';
 import { tagColor } from './FilterPanel';
 import MapEmbed from './MapEmbed';
+import { useLang } from '../LangContext';
 
 interface Props {
   city: City;
@@ -10,6 +11,7 @@ interface Props {
 }
 
 export default function ResultCard({ city, originDisplayName, onSpinAgain }: Props) {
+  const { t } = useLang();
   const osmUrl = `https://www.openstreetmap.org/directions?route=${encodeURIComponent(originDisplayName)};${city.lat},${city.lng}`;
 
   return (
@@ -47,7 +49,7 @@ export default function ResultCard({ city, originDisplayName, onSpinAgain }: Pro
         {/* title */}
         <div>
           <div className="text-[10px] uppercase tracking-[0.3em] text-vermilion mb-1">
-            {city.distanceKm} km away
+            {t.kmAway(city.distanceKm)}
           </div>
           <h2 className="text-3xl font-extrabold text-cream leading-none">
             {city.name}
@@ -59,23 +61,23 @@ export default function ResultCard({ city, originDisplayName, onSpinAgain }: Pro
 
         {/* badges */}
         <div className="flex flex-wrap gap-2">
-          <Badge label={`${city.distanceKm} km`} sub="Distance" />
+          <Badge label={`${city.distanceKm} km`} sub={t.distanceBadge} />
           {city.osmTags.ele && (
-            <Badge label={`${city.osmTags.ele} m`} sub="Elevation" />
+            <Badge label={`${city.osmTags.ele} m`} sub={t.elevationBadge} />
           )}
           {city.osmTags.wikidata && (
-            <Badge label="Wiki" sub="Info available" />
+            <Badge label={t.wikiBadge} sub={t.infoAvailableBadge} />
           )}
         </div>
 
         {/* tag chips */}
         <div className="flex flex-wrap gap-1.5">
-          {city.tags.map((t) => (
+          {city.tags.map((tag) => (
             <span
-              key={t}
-              className={`px-2 py-1 rounded-full text-[11px] font-semibold ${tagColor(t)}`}
+              key={tag}
+              className={`px-2 py-1 rounded-full text-[11px] font-semibold ${tagColor(tag)}`}
             >
-              {t}
+              {t.tagLabels[tag]}
             </span>
           ))}
         </div>
@@ -84,7 +86,7 @@ export default function ResultCard({ city, originDisplayName, onSpinAgain }: Pro
         {city.description && (
           <div>
             <h3 className="text-xs tracking-[0.25em] uppercase text-cream/50 mb-2">
-              About
+              {t.aboutSection}
             </h3>
             <p className="text-sm text-cream/70 leading-relaxed">{city.description}</p>
           </div>
@@ -94,14 +96,14 @@ export default function ResultCard({ city, originDisplayName, onSpinAgain }: Pro
         {!city.description && !city.image && (
           <div className="flex items-center gap-2 text-[11px] text-cream/30">
             <div className="w-3 h-3 rounded-full border border-cream/20 border-t-cream/50 animate-spin" />
-            Loading details…
+            {t.loadingDetails}
           </div>
         )}
 
         {/* map */}
         <div>
           <h3 className="text-xs tracking-[0.25em] uppercase text-cream/50 mb-2">
-            On the map
+            {t.onTheMap}
           </h3>
           <MapEmbed lng={city.lng} lat={city.lat} label={city.name} />
         </div>
@@ -113,7 +115,7 @@ export default function ResultCard({ city, originDisplayName, onSpinAgain }: Pro
             className="py-3 rounded-xl font-semibold text-sm bg-ink-700 text-cream/80
               border border-cream/10 hover:bg-ink-700/60 transition"
           >
-            Spin again
+            {t.spinAgain}
           </button>
           <a
             href={osmUrl}
@@ -122,7 +124,7 @@ export default function ResultCard({ city, originDisplayName, onSpinAgain }: Pro
             className="py-3 rounded-xl font-semibold text-sm bg-vermilion text-cream
               hover:bg-vermilion-dark transition text-center"
           >
-            I'm going! →
+            {t.imGoing}
           </a>
         </div>
       </div>

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import type { City } from '../data/cities';
+import { useLang } from '../LangContext';
 
 interface Props {
   pool: City[];
@@ -10,6 +11,7 @@ interface Props {
 }
 
 export default function SlotMachine({ pool, winner, progress, spinning }: Props) {
+  const { t } = useLang();
   const [idx, setIdx] = useState(0);
   const lastTickRef = useRef(0);
   const accumRef = useRef(0);
@@ -51,10 +53,10 @@ export default function SlotMachine({ pool, winner, progress, spinning }: Props)
 
   const blurPx = spinning ? Math.max(0, 6 * (1 - progress)) : 0;
 
-  // Show a short type label while spinning, "Your destination" when revealed
+  // Show a short type label while spinning, localised destination label when revealed
   const subLabel = showWinner
-    ? 'Your destination'
-    : displayed.tags[0] ?? 'place';
+    ? t.yourDestination
+    : (t.tagLabels[displayed.tags[0]] ?? displayed.tags[0] ?? 'place');
 
   return (
     <div className="relative h-36 flex items-center justify-center overflow-hidden rounded-2xl bg-ink-800/60 border border-cream/10">
