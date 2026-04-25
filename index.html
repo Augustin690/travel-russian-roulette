@@ -11,6 +11,21 @@
       rel="stylesheet"
     />
     <meta name="theme-color" content="#0f1923" />
+    <!-- Content Security Policy
+         style-src 'unsafe-inline': required for Framer Motion inline style attributes
+         script-src 'self': production Vite bundles need no eval; add 'unsafe-eval' for local dev HMR if needed -->
+    <meta http-equiv="Content-Security-Policy" content="
+      default-src 'self';
+      script-src 'self';
+      style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+      font-src https://fonts.gstatic.com;
+      img-src 'self' https://upload.wikimedia.org data: blob:;
+      connect-src 'self'
+        https://en.wikipedia.org
+        https://nominatim.openstreetmap.org
+        https://overpass-api.de;
+      frame-src https://www.openstreetmap.org;
+    " />
   </head>
   <body class="bg-ink">
     <div id="root"></div>
