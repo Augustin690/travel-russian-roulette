@@ -12,7 +12,7 @@ interface Props {
 
 export default function ResultCard({ city, originDisplayName, onSpinAgain }: Props) {
   const { t } = useLang();
-  const osmUrl = `https://www.openstreetmap.org/directions?route=${encodeURIComponent(originDisplayName)};${city.lat},${city.lng}`;
+  const gmapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${city.lat},${city.lng}`;
 
   return (
     <motion.div
@@ -118,7 +118,7 @@ export default function ResultCard({ city, originDisplayName, onSpinAgain }: Pro
             {t.spinAgain}
           </button>
           <a
-            href={osmUrl}
+            href={gmapsUrl}
             target="_blank"
             rel="noreferrer"
             className="py-3 rounded-xl font-semibold text-sm bg-vermilion text-cream
