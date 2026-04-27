@@ -29,27 +29,51 @@ export default function App() {
     setEnrichedWinner(winner);
 
     const ctrl = new AbortController();
-    fetch(
-      `https://en.wikipedia.org/w/api.php?action=query` +
-      `&titles=${encodeURIComponent(winner.name)}` +
-      `&prop=pageimages|extracts` +
-      `&format=json&pithumbsize=1200&exintro=1&explaintext=1&exchars=350&origin=*`,
-      { signal: ctrl.signal },
-    )
-      .then((r) => r.json())
-      .then((data) => {
-        const pages = data.query?.pages ?? {};
-        const page = Object.values(pages)[0] as Record<string, any>;
-        if (!page || page.missing !== undefined) return;
-        setEnrichedWinner((prev) =>
-          prev
-            ? {
-                ...prev,
-                image: page.thumbnail?.source ?? prev.image,
-                description: page.extract ?? prev.description,
-              }
-            : null,
-        );
+
+    const applyPage = (page: Record<string, any>) => {
+      setEnrichedWinner((prev) =>
+        prev
+          ? {
+              ...prev,
+              image: page.thumbnail?.source ?? prev.image,
+              description: page.extract ?? prev.description,
+            }
+          : null,
+      );
+    };
+
+    // Returns true if the article was found and applied, false if missing.
+    const fetchByTitle = (title: string): Promise<boolean> =>
+      fetch(
+        `https://en.wikipedia.org/w/api.php?action=query` +
+        `&titles=${encodeURIComponent(title)}` +
+        `&prop=pageimages|extracts` +
+        `&format=json&pithumbsize=1200&exintro=1&explaintext=1&exchars=350&origin=*`,
+        { signal: ctrl.signal },
+      )
+        .then((r) => r.json())
+        .then((data) => {
+          const pages = data.query?.pages ?? {};
+          const page = Object.values(pages)[0] as Record<string, any>;
+          if (!page || page.missing !== undefined) return false;
+          applyPage(page);
+          return true;
+        });
+
+    fetchByTitle(winner.name)
+      .then((found) => {
+        if (found) return;
+        // Direct title missing — search for the right article via opensearch.
+        return fetch(
+          `https://en.wikipedia.org/w/api.php?action=opensearch` +
+          `&search=${encodeURIComponent(winner.name)}&limit=1&format=json&origin=*`,
+          { signal: ctrl.signal },
+        )
+          .then((r) => r.json())
+          .then((res) => {
+            const firstTitle: string | undefined = res[1]?.[0];
+            if (firstTitle) return fetchByTitle(firstTitle);
+          });
       })
       .catch(() => {});
 
