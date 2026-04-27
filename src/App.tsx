@@ -20,6 +20,11 @@ export default function App() {
   const { places, status: placesStatus } = usePlaces(origin, filters);
   const { state, winner, spin, reset, progress } = useRoulette();
   const [spinError, setSpinError] = useState<string | null>(null);
+  const [blacklist, setBlacklist] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    setBlacklist(new Set());
+  }, [origin]);
 
   // Enriched winner — gets image + description from Wikipedia after selection
   const [enrichedWinner, setEnrichedWinner] = useState<City | null>(null);
@@ -82,6 +87,18 @@ export default function App() {
 
   const handleAgain = () => {
     reset();
+    setSpinError(null);
+  };
+
+  const handleExclude = () => {
+    if (!winner) return;
+    const excludedId = winner.id;
+    setBlacklist((prev) => new Set([...prev, excludedId]));
+    reset();
+    const eligible = places.filter((p) => p.id !== excludedId && !blacklist.has(p.id));
+    if (eligible.length > 0) {
+      spin(eligible);
+    }
     setSpinError(null);
   };
 
@@ -191,6 +208,7 @@ export default function App() {
               city={enrichedWinner}
               originDisplayName={origin?.displayName ?? ''}
               onSpinAgain={handleAgain}
+              onExclude={handleExclude}
             />
           </>
         )}

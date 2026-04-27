@@ -8,9 +8,10 @@ interface Props {
   city: City;
   originDisplayName: string;
   onSpinAgain: () => void;
+  onExclude: () => void;
 }
 
-export default function ResultCard({ city, originDisplayName, onSpinAgain }: Props) {
+export default function ResultCard({ city, originDisplayName, onSpinAgain, onExclude }: Props) {
   const { t } = useLang();
   const osmUrl = `https://www.openstreetmap.org/directions?route=${encodeURIComponent(originDisplayName)};${city.lat},${city.lng}`;
 
@@ -109,19 +110,28 @@ export default function ResultCard({ city, originDisplayName, onSpinAgain }: Pro
         </div>
 
         {/* actions */}
-        <div className="grid grid-cols-2 gap-3 pt-2">
-          <button
-            onClick={onSpinAgain}
-            className="py-3 rounded-xl font-semibold text-sm bg-ink-700 text-cream/80
-              border border-cream/10 hover:bg-ink-700/60 transition"
-          >
-            {t.spinAgain}
-          </button>
+        <div className="space-y-2 pt-2">
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              onClick={onSpinAgain}
+              className="py-3 rounded-xl font-semibold text-sm bg-ink-700 text-cream/80
+                border border-cream/10 hover:bg-ink-700/60 transition"
+            >
+              {t.spinAgain}
+            </button>
+            <button
+              onClick={onExclude}
+              className="py-3 rounded-xl font-semibold text-sm bg-ink-700 text-cream/80
+                border border-cream/10 hover:bg-ink-700/60 transition"
+            >
+              {t.notThisOne}
+            </button>
+          </div>
           <a
             href={osmUrl}
             target="_blank"
             rel="noreferrer"
-            className="py-3 rounded-xl font-semibold text-sm bg-vermilion text-cream
+            className="block w-full py-3 rounded-xl font-semibold text-sm bg-vermilion text-cream
               hover:bg-vermilion-dark transition text-center"
           >
             {t.imGoing}
