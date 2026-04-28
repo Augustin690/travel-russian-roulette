@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { enrichFromWikipedia } from './lib/wikipediaEnrich';
 import { AnimatePresence, motion } from 'framer-motion';
 import FilterPanel from './components/FilterPanel';
 import SpinButton from './components/SpinButton';
@@ -32,50 +33,11 @@ export default function App() {
 
     const ctrl = new AbortController();
 
-    const applyPage = (page: Record<string, any>) => {
-      setEnrichedWinner((prev) =>
-        prev
-          ? {
-              ...prev,
-              image: page.thumbnail?.source ?? prev.image,
-              description: page.extract ?? prev.description,
-            }
-          : null,
-      );
-    };
-
-    // Returns true if the article was found and applied, false if missing.
-    const fetchByTitle = (title: string): Promise<boolean> =>
-      fetch(
-        `https://en.wikipedia.org/w/api.php?action=query` +
-        `&titles=${encodeURIComponent(title)}` +
-        `&prop=pageimages|extracts` +
-        `&format=json&pithumbsize=1200&exintro=1&explaintext=1&exchars=350&origin=*`,
-        { signal: ctrl.signal },
-      )
-        .then((r) => r.json())
-        .then((data) => {
-          const pages = data.query?.pages ?? {};
-          const page = Object.values(pages)[0] as Record<string, any>;
-          if (!page || page.missing !== undefined) return false;
-          applyPage(page);
-          return true;
-        });
-
-    fetchByTitle(winner.name)
-      .then((found) => {
-        if (found) return;
-        // Direct title missing — search for the right article via opensearch.
-        return fetch(
-          `https://en.wikipedia.org/w/api.php?action=opensearch` +
-          `&search=${encodeURIComponent(winner.name)}&limit=1&format=json&origin=*`,
-          { signal: ctrl.signal },
-        )
-          .then((r) => r.json())
-          .then((res) => {
-            const firstTitle: string | undefined = res[1]?.[0];
-            if (firstTitle) return fetchByTitle(firstTitle);
-          });
+    enrichFromWikipedia(winner.name, winner.osmTags, ctrl.signal)
+      .then(({ image, description }) => {
+        setEnrichedWinner((prev) =>
+          prev ? { ...prev, image: image ?? prev.image, description: description ?? prev.description } : null,
+        );
       })
       .catch(() => {})
       .finally(() => setEnriching(false));
