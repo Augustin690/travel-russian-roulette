@@ -6,11 +6,12 @@ import { useLang } from '../LangContext';
 
 interface Props {
   city: City;
+  enriching: boolean;
   originDisplayName: string;
   onSpinAgain: () => void;
 }
 
-export default function ResultCard({ city, originDisplayName, onSpinAgain }: Props) {
+export default function ResultCard({ city, enriching, originDisplayName, onSpinAgain }: Props) {
   const { t } = useLang();
   const osmUrl = `https://www.openstreetmap.org/directions?route=${encodeURIComponent(originDisplayName)};${city.lat},${city.lng}`;
 
@@ -93,7 +94,7 @@ export default function ResultCard({ city, originDisplayName, onSpinAgain }: Pro
         )}
 
         {/* loading indicator while enriching */}
-        {!city.description && !city.image && (
+        {enriching && (
           <div className="flex items-center gap-2 text-[11px] text-cream/30">
             <div className="w-3 h-3 rounded-full border border-cream/20 border-t-cream/50 animate-spin" />
             {t.loadingDetails}

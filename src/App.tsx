@@ -23,10 +23,12 @@ export default function App() {
 
   // Enriched winner — gets image + description from Wikipedia after selection
   const [enrichedWinner, setEnrichedWinner] = useState<City | null>(null);
+  const [enriching, setEnriching] = useState(false);
 
   useEffect(() => {
-    if (!winner) { setEnrichedWinner(null); return; }
+    if (!winner) { setEnrichedWinner(null); setEnriching(false); return; }
     setEnrichedWinner(winner);
+    setEnriching(true);
 
     const ctrl = new AbortController();
 
@@ -75,7 +77,8 @@ export default function App() {
             if (firstTitle) return fetchByTitle(firstTitle);
           });
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => setEnriching(false));
 
     return () => ctrl.abort();
   }, [winner?.id]);
@@ -213,6 +216,7 @@ export default function App() {
             />
             <ResultCard
               city={enrichedWinner}
+              enriching={enriching}
               originDisplayName={origin?.displayName ?? ''}
               onSpinAgain={handleAgain}
             />
