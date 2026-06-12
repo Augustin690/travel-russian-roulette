@@ -46,6 +46,7 @@ export interface Translations {
   loadingDetails: string;
   onTheMap: string;
   spinAgain: string;
+  shareButton: string;
   imGoing: string;
 
   // Spin / load errors
@@ -103,6 +104,7 @@ export const en: Translations = {
   loadingDetails: 'Loading details…',
   onTheMap: 'On the map',
   spinAgain: 'Spin again',
+  shareButton: 'Share',
   imGoing: "I'm going! →",
 
   errSetCity: 'Set your starting city first',
@@ -159,6 +161,7 @@ export const fr: Translations = {
   loadingDetails: 'Chargement…',
   onTheMap: 'Sur la carte',
   spinAgain: 'Relancer',
+  shareButton: 'Partager',
   imGoing: "J'y vais ! →",
 
   errSetCity: 'Choisissez d\'abord votre ville de départ',

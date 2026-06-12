@@ -14,6 +14,24 @@ export default function ResultCard({ city, originDisplayName, onSpinAgain }: Pro
   const { t } = useLang();
   const osmUrl = `https://www.openstreetmap.org/directions?route=${encodeURIComponent(originDisplayName)};${city.lat},${city.lng}`;
 
+  const handleShare = async () => {
+    const url = `https://www.google.com/maps/search/?api=1&query=${city.lat},${city.lng}`;
+    const shareData: ShareData = {
+      title: city.name,
+      text: city.description ? `${city.name} — ${city.description}` : city.name,
+      url,
+    };
+    if (navigator.share && navigator.canShare?.(shareData)) {
+      try {
+        await navigator.share(shareData);
+      } catch {
+        // user cancelled or error — silent
+      }
+    } else {
+      navigator.clipboard?.writeText(url).catch(() => {});
+    }
+  };
+
   return (
     <motion.div
       initial={{ y: '100%', opacity: 0 }}
@@ -109,13 +127,20 @@ export default function ResultCard({ city, originDisplayName, onSpinAgain }: Pro
         </div>
 
         {/* actions */}
-        <div className="grid grid-cols-2 gap-3 pt-2">
+        <div className="grid grid-cols-3 gap-3 pt-2">
           <button
             onClick={onSpinAgain}
             className="py-3 rounded-xl font-semibold text-sm bg-ink-700 text-cream/80
               border border-cream/10 hover:bg-ink-700/60 transition"
           >
             {t.spinAgain}
+          </button>
+          <button
+            onClick={handleShare}
+            className="py-3 rounded-xl font-semibold text-sm bg-ink-700 text-cream/80
+              border border-cream/10 hover:bg-ink-700/60 transition"
+          >
+            {t.shareButton}
           </button>
           <a
             href={osmUrl}
