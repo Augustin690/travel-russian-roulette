@@ -8,17 +8,19 @@ import { usePlaces, type Origin, type PlacesFilters } from './hooks/usePlaces';
 import { useRoulette } from './hooks/useRoulette';
 import { useLang } from './LangContext';
 import type { City } from './data/cities';
+import { buildShareQuery, parseShareQuery } from './lib/shareUrl';
 
 export default function App() {
   const { lang, t, setLang } = useLang();
-  const [origin, setOrigin] = useState<Origin | null>(null);
-  const [filters, setFilters] = useState<PlacesFilters>({
-    radiusKm: 100,
-    activities: [],
-  });
+  const [restored, setRestored] = useState(() => parseShareQuery(window.location.search));
+  const [origin, setOrigin] = useState<Origin | null>(() => restored?.origin ?? null);
+  const [filters, setFilters] = useState<PlacesFilters>(
+    () => restored?.filters ?? { radiusKm: 100, activities: [] },
+  );
 
-  const { places, status: placesStatus } = usePlaces(origin, filters);
-  const { state, winner, spin, reset, progress } = useRoulette();
+  // Restored results must not re-query Overpass: keep the origin away from the fetch path.
+  const { places, status: placesStatus } = usePlaces(restored ? null : origin, filters);
+  const { state, winner, spin, reset, progress } = useRoulette(restored?.place ?? null);
   const [spinError, setSpinError] = useState<string | null>(null);
 
   // Enriched winner — gets image + description from Wikipedia after selection
@@ -80,6 +82,13 @@ export default function App() {
     return () => ctrl.abort();
   }, [winner?.id]);
 
+  // Keep the address bar shareable once a result is revealed, without adding history entries.
+  useEffect(() => {
+    if (state !== 'revealed' || !winner || !origin) return;
+    const query = buildShareQuery({ origin, filters, place: winner });
+    window.history.replaceState(null, '', `${window.location.pathname}${query}${window.location.hash}`);
+  }, [state, winner, origin, filters]);
+
   const spinning = state === 'spinning';
   const revealed = state === 'revealed';
 
@@ -106,7 +115,9 @@ export default function App() {
 
   const handleAgain = () => {
     reset();
+    setRestored(null);
     setSpinError(null);
+    window.history.replaceState(null, '', `${window.location.pathname}${window.location.hash}`);
   };
 
   return (

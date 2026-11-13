@@ -14,9 +14,9 @@ interface UseRouletteReturn {
 
 const SPIN_DURATION_MS = 2500;
 
-export function useRoulette(): UseRouletteReturn {
-  const [state, setState] = useState<RouletteState>('idle');
-  const [winner, setWinner] = useState<City | null>(null);
+export function useRoulette(initialWinner: City | null = null): UseRouletteReturn {
+  const [state, setState] = useState<RouletteState>(initialWinner ? 'revealed' : 'idle');
+  const [winner, setWinner] = useState<City | null>(initialWinner);
   const [progress, setProgress] = useState(0);
   const rafRef = useRef<number | null>(null);
   const startRef = useRef<number>(0);
