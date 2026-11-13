@@ -5,7 +5,7 @@ describe('buildOverpassQuery', () => {
   it('produces valid Overpass QL output format', () => {
     const q = buildOverpassQuery(51.5, -0.1, 50_000);
     expect(q).toContain('[out:json]');
-    expect(q).toContain('[timeout:30]');
+    expect(q).toContain('[timeout:90]');
     expect(q).toContain('out center tags 100');
   });
 
